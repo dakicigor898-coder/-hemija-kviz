@@ -1,0 +1,172 @@
+
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aromati - 100 interaktivnih fleš kartica</title>
+<style>
+:root {
+  --bg:#0f172a; --card:#ffffff; --text:#111827; --muted:#6b7280;
+  --blue:#2563eb; --green:#16a34a; --red:#dc2626; --soft:#f3f4f6;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; padding:20px; font-family:Arial, sans-serif; background:linear-gradient(135deg,#0f172a,#1e3a8a);
+  color:var(--text); min-height:100vh;
+}
+.wrap{max-width:820px;margin:0 auto}
+.card{
+  background:var(--card); border-radius:22px; padding:24px; box-shadow:0 18px 50px rgba(0,0,0,.25);
+}
+.top{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.badge{background:#dbeafe;color:#1e40af;padding:8px 12px;border-radius:999px;font-weight:700;font-size:14px}
+.score{font-weight:700;color:#111827}
+.progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin:14px 0 22px}
+.bar{height:100%;width:0;background:var(--blue);transition:.25s}
+h1{font-size:24px;margin:0 0 4px}
+.small{color:var(--muted);margin:0 0 18px}
+.question{font-size:22px;line-height:1.35;font-weight:700;margin:12px 0 20px}
+.answer{
+  width:100%; text-align:left; border:0; background:var(--soft); padding:15px 16px; margin:10px 0;
+  border-radius:14px; font-size:16px; cursor:pointer; transition:.15s; color:#111827;
+}
+.answer:hover{transform:translateY(-1px);background:#e5e7eb}
+.answer:disabled{cursor:default;opacity:1}
+.correct{background:var(--green)!important;color:white}
+.wrong{background:var(--red)!important;color:white}
+.explanation{min-height:48px;margin-top:16px;font-size:16px;line-height:1.45;color:#111827}
+.controls{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+.ctrl{
+  border:0; border-radius:12px; padding:13px 16px; font-size:16px; cursor:pointer; font-weight:700;
+}
+.next{background:var(--blue);color:#fff;display:none;flex:1}
+.restart{background:#e5e7eb;color:#111827}
+.mode{background:#fef3c7;color:#92400e}
+.final{text-align:center;padding:30px 10px}
+.final h2{font-size:32px;margin:0 0 10px}
+@media(max-width:520px){
+  body{padding:12px}
+  .card{padding:18px;border-radius:18px}
+  .question{font-size:19px}
+  h1{font-size:21px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="card">
+    <div class="top">
+      <div>
+        <h1>Aromati — 100 fleš kartica</h1>
+        <p class="small">Klikni odgovor. Tačan pozeleni, pogrešan pocrveni.</p>
+      </div>
+      <div class="badge" id="counter">Pitanje 1/100</div>
+    </div>
+    <div class="top">
+      <div class="score" id="score">Tačno: 0 | Netačno: 0</div>
+      <button class="ctrl mode" onclick="toggleShuffle()">Mešanje: uključeno</button>
+    </div>
+    <div class="progress"><div class="bar" id="bar"></div></div>
+    <div class="question" id="question"></div>
+    <div id="answers"></div>
+    <div class="explanation" id="explanation"></div>
+    <div class="controls">
+      <button class="ctrl next" id="next" onclick="nextQuestion()">Sledeće pitanje</button>
+      <button class="ctrl restart" onclick="restartQuiz()">Restart</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const originalQuestions = [{"q": "Koji je osnovni uslov za aromatičnost?", "a": ["Samo prisustvo benzena", "Cikličan, planaran, konjugovan sistem sa (4n+2) π elektrona", "Samo nepolarnost molekula", "Bilo koji prsten sa dvostrukom vezom"], "c": 1, "e": "Aromatičnost traži cikličan, planaran i konjugovan π sistem koji po Hückelovom pravilu ima (4n+2) π elektrona."}, {"q": "Koliko π elektrona ima benzen?", "a": ["8", "4", "2", "6"], "c": 3, "e": "Benzen ima tri π veze, ukupno 6 π elektrona."}, {"q": "Koja je najtipičnija reakcija benzena?", "a": ["Radikalna polimerizacija", "Elektrofilna aromatična supstitucija", "Eliminacija vode", "Nukleofilna adicija"], "c": 1, "e": "Benzen najčešće reaguje supstitucijom jer tako zadržava aromatičnost."}, {"q": "Zašto benzen nerado ulazi u adicione reakcije?", "a": ["Zato što bi izgubio aromatičnost", "Zato što je jonsko jedinjenje", "Zato što nema elektrone", "Zato što je zasićen alkan"], "c": 0, "e": "Adicija bi prekinula aromatični π sistem, pa je energetski nepovoljna."}, {"q": "Koji katalizator se koristi u bromovanju benzena?", "a": ["KMnO4", "FeBr3", "H2O", "NaOH"], "c": 1, "e": "FeBr3 polarizuje Br2 i pomaže nastanak elektrofilne čestice."}, {"q": "Koji proizvod nastaje bromovanjem benzena?", "a": ["Cikloheksan", "Fenol", "Bromoetan", "Bromobenzen"], "c": 3, "e": "U EAS reakciji jedan H na benzenu se zamenjuje Br atomom."}, {"q": "Koji elektrofil napada benzen pri nitraciji?", "a": ["NO2+", "NO2-", "NH4+", "OH-"], "c": 0, "e": "Nitronijum jon NO2+ je elektrofil u nitraciji."}, {"q": "Koja smeša se koristi za nitraciju benzena?", "a": ["Koncentrovana HNO3 + koncentrovana H2SO4", "KMnO4 + voda", "Br2 + voda", "HCl + NaOH"], "c": 0, "e": "H2SO4 pomaže stvaranje NO2+ iz HNO3."}, {"q": "Proizvod nitracije benzena je:", "a": ["Fenol", "Anilin", "Nitrobenzen", "Toluen"], "c": 2, "e": "U nitraciji se na benzen uvodi -NO2 grupa."}, {"q": "Koji elektrofil učestvuje u sulfonovanju benzena?", "a": ["Cl-", "OH-", "SO3", "CH3-"], "c": 2, "e": "SO3 je elektrofil koji napada benzenski prsten."}, {"q": "Proizvod sulfonovanja benzena je:", "a": ["Anilin", "Benzen-sulfonska kiselina", "Benzaldehid", "Fenol"], "c": 1, "e": "Na prsten se uvodi -SO3H grupa."}, {"q": "Šta je Friedel-Crafts alkilacija?", "a": ["Uvođenje alkil grupe na aromatični prsten", "Uvođenje nitro grupe", "Redukcija benzena", "Uvođenje sulfo grupe"], "c": 0, "e": "Friedel-Crafts alkilacija uvodi R grupu pomoću alkil-halogenida i AlCl3."}, {"q": "Koji katalizator se često koristi u Friedel-Crafts reakcijama?", "a": ["AlCl3", "KMnO4", "H2O", "NaCl"], "c": 0, "e": "AlCl3 je Lewisova kiselina i pomaže stvaranje elektrofilne čestice."}, {"q": "Šta nastaje iz benzena i CH3Cl u prisustvu AlCl3?", "a": ["Anilin", "Toluen", "Fenol", "Benzoeva kiselina"], "c": 1, "e": "Uvodi se metil grupa, pa nastaje metilbenzen, tj. toluen."}, {"q": "Šta je Friedel-Crafts acilacija?", "a": ["Uvođenje -OH grupe", "Uvođenje acil grupe -COR na aromatični prsten", "Skidanje alkil grupe", "Uvođenje -NO2 grupe"], "c": 1, "e": "Acilacija uvodi grupu tipa RCO- na aromatični prsten."}, {"q": "Koji jon je elektrofil u Friedel-Crafts acilaciji?", "a": ["Nitratni jon NO3-", "Hidridni jon H-", "Hidroksidni jon OH-", "Acilijum jon RCO+"], "c": 3, "e": "Acilijum jon RCO+ napada aromatični prsten."}, {"q": "Koja grupa je jaka aktivirajuća grupa?", "a": ["-NO2", "-SO3H", "-NH2", "-COOH"], "c": 2, "e": "-NH2 donira elektrone rezonancijom i jako aktivira prsten."}, {"q": "Koja grupa je jaka deaktivirajuća grupa?", "a": ["-NO2", "-OH", "-CH3", "-NH2"], "c": 0, "e": "-NO2 snažno povlači elektrone i deaktivira prsten."}, {"q": "Koje grupe najčešće usmeravaju u orto/para položaj?", "a": ["Samo nitro grupa", "Sve meta grupe", "Elektron-donorske grupe", "Elektron-akceptorske grupe"], "c": 2, "e": "Donorske grupe povećavaju elektronsku gustinu naročito u orto i para položajima."}, {"q": "Koja grupa usmerava u meta položaj?", "a": ["-NO2", "-NH2", "-OH", "-CH3"], "c": 0, "e": "-NO2 je deaktivirajuća grupa i meta direktor."}, {"q": "Halogeni na benzenu su:", "a": ["Deaktivirajući, ali orto/para direktori", "Uvek meta direktori", "Nemaju uticaj", "Aktivirajući meta direktori"], "c": 0, "e": "Halogeni induktivno povlače elektrone, ali rezonancijom usmeravaju orto/para."}, {"q": "Metil grupa na benzenu je:", "a": ["Aktivirajuća orto/para direktor", "Deaktivirajuća meta direktor", "Jaka kiselina", "Nukleofil koji napada benzen"], "c": 0, "e": "-CH3 blago donira elektrone i usmerava orto/para."}, {"q": "Fenol u odnosu na benzen reaguje:", "a": ["Samo adicijom", "Nikako", "Teže u EAS reakcijama", "Lakše u EAS reakcijama"], "c": 3, "e": "-OH grupa aktivira prsten rezonancijom."}, {"q": "Anilin u odnosu na benzen reaguje:", "a": ["Teže jer -NH2 deaktivira prsten", "Lakše jer -NH2 aktivira prsten", "Isto kao cikloheksan", "Samo sa bazama"], "c": 1, "e": "-NH2 snažno donira elektronski par u prsten."}, {"q": "Nitrobenzen u odnosu na benzen reaguje:", "a": ["Lakše u EAS reakcijama", "Samo adicijom", "Uopšte nema prsten", "Teže u EAS reakcijama"], "c": 3, "e": "-NO2 povlači elektrone i smanjuje reaktivnost prstena."}, {"q": "Koji je glavni orijentacioni efekat -OH grupe?", "a": ["Nema efekta", "Samo ipso", "Orto/para", "Meta"], "c": 2, "e": "-OH je aktivirajuća orto/para grupa."}, {"q": "Koji je glavni orijentacioni efekat -COOH grupe?", "a": ["Samo orto", "Meta", "Nema efekta", "Orto/para"], "c": 1, "e": "-COOH povlači elektrone i usmerava u meta položaj."}, {"q": "Koji je glavni orijentacioni efekat -CHO grupe?", "a": ["Meta", "Samo para", "Orto/para", "Samo orto"], "c": 0, "e": "-CHO je elektron-akceptorska grupa i meta direktor."}, {"q": "Koji je glavni orijentacioni efekat -SO3H grupe?", "a": ["Orto/para", "Samo orto", "Meta", "Nema efekta"], "c": 2, "e": "-SO3H je jaka deaktivirajuća meta grupa."}, {"q": "Koji je glavni orijentacioni efekat -Cl grupe?", "a": ["Meta i aktivira", "Samo meta", "Nema efekta", "Orto/para, ali deaktivira"], "c": 3, "e": "Hlor deaktivira induktivno, ali usmerava orto/para rezonancijom."}, {"q": "Koliko različitih monosupstituisanih derivata može dati benzen?", "a": ["Jedan", "Šest", "Dva", "Tri"], "c": 0, "e": "Svi H atomi u benzenu su ekvivalentni."}, {"q": "Koliko različitih disupstituisanih benzena postoji za iste supstituente?", "a": ["Tri: orto, meta, para", "Šest", "Dva", "Jedan"], "c": 0, "e": "Postoje 1,2-; 1,3-; i 1,4- položaji."}, {"q": "Orto položaj kod disupstituisanog benzena znači:", "a": ["1,5-položaj", "1,2-položaj", "1,3-položaj", "1,4-položaj"], "c": 1, "e": "Orto znači da su supstituenti susedni."}, {"q": "Meta položaj znači:", "a": ["1,6-položaj", "1,3-položaj", "1,4-položaj", "1,2-položaj"], "c": 1, "e": "Meta znači da između supstituenata postoji jedan C atom."}, {"q": "Para položaj znači:", "a": ["1,3-položaj", "1,4-položaj", "1,5-položaj", "1,2-položaj"], "c": 1, "e": "Para znači da su supstituenti naspramno u prstenu."}, {"q": "Koja formula odgovara benzenu?", "a": ["C6H6", "C6H12", "C5H6", "C6H14"], "c": 0, "e": "Benzen ima molekulsku formulu C6H6."}, {"q": "Koja je hibridizacija ugljenikovih atoma u benzenu?", "a": ["sp2", "sp", "dsp3", "sp3"], "c": 0, "e": "Svaki C u benzenu je sp2 hibridizovan i ima p orbitalu za π sistem."}, {"q": "Koliki je približan ugao veza u benzenu?", "a": ["109.5°", "90°", "120°", "180°"], "c": 2, "e": "sp2 hibridizacija daje trigonalno-planarnu geometriju od oko 120°."}, {"q": "Da li su C-C veze u benzenu jednake?", "a": ["Ne, tri su proste, tri dvostruke potpuno različite", "Da, sve su jednake zbog delokalizacije", "Nema C-C veza", "Samo jedna je dvostruka"], "c": 1, "e": "Delokalizacija izjednačava C-C veze."}, {"q": "Šta znači delokalizacija π elektrona?", "a": ["Elektroni napuštaju molekul", "Veza postaje jonska", "Elektroni postaju protoni", "Elektroni nisu vezani samo za jednu vezu, već su raspoređeni preko prstena"], "c": 3, "e": "π elektroni su raspoređeni preko celog konjugovanog sistema."}, {"q": "Šta je sigma-kompleks u EAS reakciji?", "a": ["Slobodna baza", "Konačni produkt", "Privremeni karbokationski intermedijer posle napada elektrofila", "Radikalni lanac"], "c": 2, "e": "Posle napada elektrofila aromatičnost se privremeno gubi i nastaje sigma-kompleks."}, {"q": "Šta se dešava na kraju EAS mehanizma?", "a": ["Prsten se cepa", "Dodaje se H2O na prsten", "Nastaje alkan", "Odlazi H+ i vraća se aromatičnost"], "c": 3, "e": "Gubitkom protona obnavlja se aromatični sistem."}, {"q": "Koja čestica napada benzen u EAS reakcijama?", "a": ["Hidridni jon", "Neutron", "Nukleofil", "Elektrofil"], "c": 3, "e": "π elektroni benzena napadaju elektrofil."}, {"q": "Zašto je benzen nukleofilan prema elektrofilima?", "a": ["Ima samo protone", "Ima metalni jon", "Ima π elektrone iznad i ispod ravni prstena", "Nema elektrone"], "c": 2, "e": "π oblak je bogat elektronima i privlači elektrofile."}, {"q": "Koji spoj je aromatičan?", "a": ["Benzen", "Propan", "Cikloheksan", "Etan"], "c": 0, "e": "Benzen je klasičan aromatičan spoj."}, {"q": "Da li cikloheksan ima aromatičnost?", "a": ["Da, jer je cikličan", "Da, jer ima 6 C atoma", "Da, jer je nepolaran", "Ne, nema konjugovan π sistem"], "c": 3, "e": "Cikloheksan nema π elektronski sistem."}, {"q": "Da li cikloheksen mora biti aromatičan?", "a": ["Da, svaki cikloalken je aromatičan", "Ne, sama jedna dvostruka veza nije dovoljna", "Da, jer ima prsten", "Da, jer je nezasićen"], "c": 1, "e": "Za aromatičnost je potreban neprekidan konjugovan sistem."}, {"q": "Šta znači Hückelovo pravilo?", "a": ["Svaki prsten ima 4n elektrona", "Aromatičan sistem ima 4n+2 π elektrona", "Svi alkani su aromatični", "Benzen ima samo sigma veze"], "c": 1, "e": "Za n=1 dobija se 6 π elektrona, što odgovara benzenu."}, {"q": "Koliko je n u Hückelovom pravilu za benzen?", "a": ["3", "1", "2", "0"], "c": 1, "e": "4n+2=6, pa je n=1."}, {"q": "Sistem sa 4 π elektrona u planarnom cikličnom konjugovanom prstenu je najčešće:", "a": ["Uvek alkan", "Antiaromatičan", "Zasićen", "Aromatičan"], "c": 1, "e": "4n π elektrona daju antiaromatičnost ako su ispunjeni ostali uslovi."}, {"q": "Koji spoj ima naziv metilbenzen?", "a": ["Toluen", "Anilin", "Fenol", "Nitrobenzen"], "c": 0, "e": "Toluen je metilbenzen."}, {"q": "Koji spoj ima naziv hidroksibenzen?", "a": ["Fenol", "Stiren", "Toluen", "Anilin"], "c": 0, "e": "Fenol je benzen sa -OH grupom."}, {"q": "Koji spoj ima naziv aminobenzen?", "a": ["Anilin", "Fenol", "Benzaldehid", "Toluen"], "c": 0, "e": "Anilin je benzen sa -NH2 grupom."}, {"q": "Koji spoj ima naziv vinilbenzen?", "a": ["Fenol", "Anilin", "Stiren", "Toluen"], "c": 2, "e": "Stiren je vinilbenzen."}, {"q": "Koja grupa je u toluenu?", "a": ["-OH", "-NH2", "-CH3", "-NO2"], "c": 2, "e": "Toluen je metilbenzen."}, {"q": "Koja grupa je u fenolu?", "a": ["-OH", "-NO2", "-SO3H", "-CH3"], "c": 0, "e": "Fenol je hidroksibenzen."}, {"q": "Koja grupa je u anilinu?", "a": ["-COOH", "-NH2", "-OH", "-CHO"], "c": 1, "e": "Anilin je aminobenzen."}, {"q": "Koji je proizvod oksidacije bočnog lanca toluena jakim oksidansom?", "a": ["Fenol", "Bromobenzen", "Benzoeva kiselina", "Anilin"], "c": 2, "e": "Bočni alkil lanac na benzenu može se oksidovati do -COOH ako ima benzični H."}, {"q": "Koji reagens se često koristi za oksidaciju alkilbenzena do benzoeve kiseline?", "a": ["HCl bez oksidansa", "NaCl", "KMnO4", "H2O"], "c": 2, "e": "KMnO4 može oksidovati alkil bočni lanac do karboksilne kiseline."}, {"q": "Kada se toluen nitruje, najviše nastaju:", "a": ["Samo benzoeva kiselina", "Orto i para nitrotoluen", "Samo fenol", "Samo meta nitrotoluen"], "c": 1, "e": "Metil grupa je orto/para direktor."}, {"q": "Kada se nitrobenzen dalje nitruje, najviše nastaje:", "a": ["Toluen", "Meta-dinitrobenzen", "Para-dinitrobenzen samo", "Orto-dinitrobenzen"], "c": 1, "e": "-NO2 je meta direktor."}, {"q": "Kada se fenol bromuje, reakcija je:", "a": ["Nemoguća", "Samo uz ekstremne uslove", "Lakša nego kod benzena", "Uvek samo meta"], "c": 2, "e": "-OH jako aktivira prsten, pa fenol lako reaguje."}, {"q": "Zašto -OH grupa aktivira benzen?", "a": ["Pretvara benzen u alkan", "Nema elektrone", "Donira elektronski par rezonancijom", "Uvek uklanja π elektrone"], "c": 2, "e": "Slobodan elektronski par kiseonika može da se delokalizuje u prsten."}, {"q": "Zašto -NO2 grupa deaktivira benzen?", "a": ["Uvek reaguje kao baza", "Pretvara prsten u alkan", "Daje elektrone prstenu", "Povlači elektrone induktivno i rezonancijom"], "c": 3, "e": "-NO2 smanjuje elektronsku gustinu prstena."}, {"q": "Koja grupa ima +M efekat?", "a": ["-OH", "-COOH", "-NO2", "-CHO"], "c": 0, "e": "-OH može davati elektronski par u prsten rezonancijom."}, {"q": "Koja grupa ima jak -M efekat?", "a": ["-OH", "-CH3", "-NH2", "-NO2"], "c": 3, "e": "-NO2 povlači elektrone rezonancijom iz prstena."}, {"q": "Koja grupa ima +I efekat?", "a": ["-COOH", "-NO2", "-CHO", "-CH3"], "c": 3, "e": "Alkil grupe blago guraju elektronsku gustinu prema prstenu."}, {"q": "Koji efekat preovlađuje kod halogena na benzenu za reaktivnost?", "a": ["Nema efekta", "-I efekat, zato deaktiviraju", "+I efekat, zato snažno aktiviraju", "Samo radikalni efekat"], "c": 1, "e": "Halogeni induktivno povlače elektrone, pa usporavaju EAS."}, {"q": "Zašto halogeni ipak usmeravaju orto/para?", "a": ["Slobodni parovi mogu rezonancijom donirati u prsten", "Zato što su uvek katjoni", "Zato što nemaju elektrone", "Zato što uklanjaju H+"], "c": 0, "e": "Rezonantno doniranje stabilizuje orto/para sigma-kompleks."}, {"q": "Šta je elektrofil u hlorovanju benzena?", "a": ["Cl-", "Na+", "OH-", "Aktivisani hlor, približno Cl+"], "c": 3, "e": "FeCl3 polarizuje Cl2 i nastaje elektrofilna hlorujuća čestica."}, {"q": "Katalizator za hlorovanje benzena može biti:", "a": ["H2O", "CuSO4", "NaOH", "FeCl3"], "c": 3, "e": "FeCl3 je Lewisova kiselina i aktivira Cl2."}, {"q": "Proizvod hlorovanja benzena je:", "a": ["Fenol", "Hlorobenzen", "Benzoeva kiselina", "Hlorocikloheksan"], "c": 1, "e": "Jedan H na prstenu zamenjuje se Cl atomom."}, {"q": "Šta se formalno zamenjuje u EAS reakciji benzena?", "a": ["H atom na prstenu", "C atom prstena", "Cela π veza", "Svi atomi vodonika"], "c": 0, "e": "Supstitucija znači zamenu H atoma drugim supstituentom."}, {"q": "Koji nusprodukt nastaje pri bromovanju benzena?", "a": ["CO2", "HBr", "NH3", "H2O"], "c": 1, "e": "H sa prstena i Br daju HBr."}, {"q": "Koji nusprodukt nastaje pri hlorovanju benzena?", "a": ["HCl", "CO2", "CH4", "H2O"], "c": 0, "e": "H sa prstena i Cl daju HCl."}, {"q": "Koji nusprodukt nastaje pri nitraciji benzena?", "a": ["NH3", "CO2", "H2O", "HCl"], "c": 2, "e": "Ukupno se pri nitraciji uklanja H i OH, pa nastaje voda."}, {"q": "Koji uslov nije potreban za aromatičnost?", "a": ["Hückelovo pravilo", "Da molekul obavezno ima kiseonik", "Konjugacija", "Planarnost"], "c": 1, "e": "Kiseonik nije potreban; benzen nema kiseonik."}, {"q": "Koja tvrdnja o benzenu je tačna?", "a": ["Stabilniji je nego što bi se očekivalo za običan trien", "Nema π elektrone", "Lako se adira bromom bez katalizatora", "Ponaša se kao običan alken"], "c": 0, "e": "Aromatična stabilizacija čini benzen posebno stabilnim."}, {"q": "Šta znači rezonantna stabilizacija?", "a": ["Stabilizacija delokalizacijom elektrona", "Stabilizacija samo jonima metala", "Stabilizacija cepanjem prstena", "Stabilizacija gubitkom svih elektrona"], "c": 0, "e": "Delokalizacija smanjuje energiju sistema."}, {"q": "Koji je drugi naziv za benzenski prsten kao supstituent C6H5-?", "a": ["Metil", "Vinil", "Benzil", "Fenil"], "c": 3, "e": "C6H5- kao grupa naziva se fenil."}, {"q": "Koji je naziv za C6H5-CH2- grupu?", "a": ["Vinil", "Fenil", "Etil", "Benzil"], "c": 3, "e": "Benzil grupa je fenil vezan preko CH2."}, {"q": "Razlika između fenila i benzila je:", "a": ["Fenil ima CH2, benzil nema", "Nema razlike", "Benzil nema benzenski prsten", "Benzil ima CH2 između prstena i ostatka molekula"], "c": 3, "e": "Fenil je C6H5-, a benzil je C6H5CH2-."}, {"q": "Koji je spoj C6H5CHO?", "a": ["Anilin", "Benzaldehid", "Toluen", "Fenol"], "c": 1, "e": "-CHO na benzenu daje benzaldehid."}, {"q": "Koji je spoj C6H5COOH?", "a": ["Fenol", "Stiren", "Anilin", "Benzoeva kiselina"], "c": 3, "e": "-COOH na benzenu daje benzoevu kiselinu."}, {"q": "Koji je spoj C6H5NH2?", "a": ["Fenol", "Anilin", "Benzaldehid", "Toluen"], "c": 1, "e": "C6H5NH2 je anilin."}, {"q": "Koji je spoj C6H5OH?", "a": ["Benzil alkohol", "Anilin", "Fenol", "Toluen"], "c": 2, "e": "C6H5OH je fenol."}, {"q": "Fenol je kiseliji od alkohola zato što:", "a": ["Alkoholi nemaju kiseonik", "Fenol nema O-H vezu", "Fenol je alkan", "Fenoksidni jon je rezonantno stabilizovan"], "c": 3, "e": "Negativan naboj fenoksida može se delokalizovati po prstenu."}, {"q": "Anilin je slabija baza od alifatičnih amina jer:", "a": ["Slobodan par N ulazi u rezonanciju sa prstenom", "Nema elektrone", "Ima pozitivan naboj", "Nema azot"], "c": 0, "e": "Elektronski par je manje dostupan za vezivanje H+ jer je delokalizovan."}, {"q": "Koja reakcija pretvara nitrobenzen u anilin?", "a": ["Redukcija", "Sulfonovanje", "Oksidacija", "Esterifikacija"], "c": 0, "e": "-NO2 se redukuje u -NH2."}, {"q": "Koji reagens se često koristi za redukciju nitrobenzena u anilin u školskim primerima?", "a": ["NaOH", "KMnO4", "Fe/HCl", "Br2/FeBr3"], "c": 2, "e": "Fe/HCl redukuje nitro grupu do amino grupe."}, {"q": "Koja reakcija anilina sa NaNO2/HCl na niskoj temperaturi daje diazonijum so?", "a": ["Diazotovanje", "Friedel-Crafts", "Sulfonovanje", "Nitracija"], "c": 0, "e": "Primarni aromatični amin daje diazonijum so."}, {"q": "Diazonijum soli su korisne jer:", "a": ["Ne reaguju dalje", "Uvek daju alkane", "Mogu dati različite supstituisane aromate", "Nemaju azot"], "c": 2, "e": "Diazonijum grupa se može zameniti različitim grupama."}, {"q": "Koja grupa je u aril-diazonijum soli?", "a": ["-CH3", "-N2+", "-COOH", "-OH"], "c": 1, "e": "Diazonijum grupa je -N≡N+ vezana za aril grupu."}, {"q": "Šta nastaje ako se benzen hidrogeniše potpuno?", "a": ["Cikloheksan", "Fenol", "Toluen", "Anilin"], "c": 0, "e": "Potpuna hidrogenacija benzena daje cikloheksan."}, {"q": "Hidrogenacija benzena zahteva:", "a": ["Samo vodu na sobnoj temperaturi", "NaCl", "H2 i katalizator uz oštrije uslove", "Samo svetlost"], "c": 2, "e": "Zbog stabilnosti benzena hidrogenacija traži katalizator i jače uslove."}, {"q": "Stiren ima koju bočnu grupu?", "a": ["-CH3", "-CH=CH2", "-COOH", "-OH"], "c": 1, "e": "Stiren je vinilbenzen."}, {"q": "Koja reakcija je moguća na bočnom lancu stirena?", "a": ["Nitracija bočnog lanca kao prva reakcija", "Neutralizacija kao kiselina", "Samo hidroliza", "Adicija na C=C vezu"], "c": 3, "e": "Vinil grupa ima dvostruku vezu i može davati adicione reakcije."}, {"q": "Koja je razlika između reakcija benzena i alkena?", "a": ["Alkeni su aromatični", "Benzen je uvek jon", "Benzen češće supstitucija, alkeni češće adicija", "Benzen nema elektrone, alkeni imaju"], "c": 2, "e": "Benzen čuva aromatičnost supstitucijom, dok alkeni lako adiraju."}, {"q": "Koji spoj bi najbrže reagovao u EAS?", "a": ["Benzoeva kiselina", "Hlorobenzen", "Fenol", "Nitrobenzen"], "c": 2, "e": "Fenol je jako aktiviran -OH grupom."}, {"q": "Koji spoj bi najsporije reagovao u EAS?", "a": ["Nitrobenzen", "Toluen", "Fenol", "Anilin"], "c": 0, "e": "Nitro grupa snažno deaktivira prsten."}];
+let shuffleOn = true;
+let questions = [];
+let i = 0, correct = 0, wrong = 0, answered = false;
+
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let j = a.length - 1; j > 0; j--) {
+    const k = Math.floor(Math.random() * (j + 1));
+    [a[j], a[k]] = [a[k], a[j]];
+  }
+  return a;
+}
+
+function startQuestions() {
+  questions = shuffleOn ? shuffleArray(originalQuestions) : [...originalQuestions];
+}
+
+function render() {
+  answered = false;
+  const q = questions[i];
+  counter.textContent = `Pitanje ${i+1}/${questions.length}`;
+  score.textContent = `Tačno: ${correct} | Netačno: ${wrong}`;
+  bar.style.width = `${(i/questions.length)*100}%`;
+  question.textContent = q.q;
+  answers.innerHTML = "";
+  explanation.textContent = "";
+  next.style.display = "none";
+  q.a.forEach((text, idx) => {
+    const b = document.createElement("button");
+    b.className = "answer";
+    b.textContent = String.fromCharCode(65+idx) + ") " + text;
+    b.onclick = () => checkAnswer(idx, b);
+    answers.appendChild(b);
+  });
+}
+
+function checkAnswer(idx, btn) {
+  if (answered) return;
+  answered = true;
+  const q = questions[i];
+  [...answers.children].forEach(b => b.disabled = true);
+  if (idx === q.c) {
+    btn.classList.add("correct");
+    correct++;
+    explanation.textContent = "✅ Tačno. " + q.e;
+  } else {
+    btn.classList.add("wrong");
+    answers.children[q.c].classList.add("correct");
+    wrong++;
+    explanation.textContent = "❌ Netačno. Tačan odgovor je " + String.fromCharCode(65+q.c) + ". " + q.e;
+  }
+  score.textContent = `Tačno: ${correct} | Netačno: ${wrong}`;
+  next.style.display = "block";
+}
+
+function nextQuestion() {
+  i++;
+  if (i >= questions.length) return finish();
+  render();
+}
+
+function finish() {
+  bar.style.width = "100%";
+  const percent = Math.round((correct/questions.length)*100);
+  card.innerHTML = `
+    <div class="final">
+      <h2>Gotovo! 🎉</h2>
+      <p style="font-size:22px"><b>Rezultat: ${correct}/${questions.length}</b> (${percent}%)</p>
+      <p>Netačno: ${wrong}</p>
+      <button class="ctrl next" style="display:inline-block" onclick="location.reload()">Uradi ponovo</button>
+    </div>`;
+}
+
+function restartQuiz() {
+  i=0; correct=0; wrong=0;
+  startQuestions();
+  render();
+}
+
+function toggleShuffle() {
+  shuffleOn = !shuffleOn;
+  document.querySelector(".mode").textContent = "Mešanje: " + (shuffleOn ? "uključeno" : "isključeno");
+  restartQuiz();
+}
+
+startQuestions();
+render();
+</script>
+</body>
+</html>
